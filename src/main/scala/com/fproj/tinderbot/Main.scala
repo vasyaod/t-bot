@@ -111,9 +111,11 @@ object MyApp extends ZIOAppDefault {
   val readCommand = for {
     command <- readLine
     _ <- command match {
-      case "p" => randomBio
-      case "b" => Commands.applyBoost
+      case s"bio ${index}" => Commands.editProfile(bios(index.toInt))
+      case "boost" => Commands.applyBoost
       case "p1" => Commands.editPic()
+      case "count" => Commands.countPic()
+      case "move" => Commands.movePic(6, 1)
       case "q" => ZIO.attempt { java.lang.System.exit(0) }
       case _ => ZIO.logInfo("Unknown command")
     }

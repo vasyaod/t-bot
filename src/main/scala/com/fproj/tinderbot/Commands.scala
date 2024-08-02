@@ -1,7 +1,8 @@
 package com.fproj.tinderbot
 
-import com.microsoft.playwright.Page
+import com.microsoft.playwright.{Mouse, Page}
 import com.microsoft.playwright.Page.WaitForDownloadOptions
+import com.microsoft.playwright.options.BoundingBox
 import zio._
 
 import java.nio.file.Paths
@@ -49,7 +50,7 @@ object Commands {
           }
           _ <- ZIO.sleep(zio.Duration.fromSeconds(3))
           _ <- ZIO.attempt {
-            val bb = page.frameLocator("[title=\"Sign in with Google Dialog\"]").locator("button :text(\"Continue as Vasiliy\")").boundingBox()
+            val bb: BoundingBox = page.frameLocator("[title=\"Sign in with Google Dialog\"]").locator("button :text(\"Continue as Vasiliy\")").boundingBox()
             page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height - 5);
           }
           _ <- ZIO.logInfo("Authorization successful")
@@ -75,13 +76,29 @@ object Commands {
     } yield ()
   }
 
-  /** Upload a new pic in a free slot */
-  def uploadPic(file: String) = PageLock.lock {
+  def drugAndDrop(bb0: BoundingBox, bb1: BoundingBox) = {
     for {
       page <- ZIO.service[Page]
       _ <- ZIO.attemptBlocking {
+        page.mouse.move(bb0.x + bb0.width / 2, bb0.y + bb0.height / 2)
+        page.mouse.down()
+        page.mouse.move(bb1.x + bb1.width / 2, bb1.y + bb1.height / 2, new Mouse.MoveOptions().setSteps(20))
+        page.mouse.up()
+      }
+    } yield ()
+  }
+
+  /** Upload a new pic in a free slot */
+  def uploadPic(file: String, placeIndex: Int) = PageLock.lock {
+    for {
+      _ <- ZIO.logInfo(s"Upload pic from slot $file")
+      page <- ZIO.service[Page]
+      bb0 <- ZIO.attemptBlocking {
         val selector = "button .StretchedBox"
-        page.locator(selector).nth(0).click()
+        val l = page.locator(selector).nth(0)
+        val bbox = l.boundingBox()
+        l.click()
+        bbox
       }
       _ <- ZIO.attemptBlocking {
         //page.waitForFileChooser(new Page.WaitForFileChooserOptions().setPredicate())
@@ -95,31 +112,61 @@ object Commands {
       _ <- ZIO.attemptBlocking {
         page.locator("button :text(\"Choose\")").click()
       }
-      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(7))
+      bb1 <- ZIO.attemptBlocking {
+        page.locator(s"span .StretchedBox .StretchedBox").nth(placeIndex).boundingBox()
+      }
+      _ <- drugAndDrop(bb0, bb1)
+    } yield ()
+  }
+
+  /** Upload a new pic in a free slot */
+  def movePic(from: Int, to: Int) = PageLock.lock {
+    for {
+      page <- ZIO.service[Page]
+      _ <- navigate("https://tinder.com/app/profile/edit")
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(5))
+      bb0 <- ZIO.attemptBlocking {
+        page.locator(s"span .StretchedBox .StretchedBox").nth(from).boundingBox()
+      }
+      bb1 <- ZIO.attemptBlocking {
+        page.locator(s"span .StretchedBox .StretchedBox").nth(to).boundingBox()
+      }
+      _ <- drugAndDrop(bb0, bb1)
     } yield ()
   }
 
   /** Upload a new pic in a free slot */
   def removePic(picIndex: Int) = PageLock.lock {
     for {
+      _ <- ZIO.logInfo(s"Remove pic from slot $picIndex")
       page <- ZIO.service[Page]
       _ <- ZIO.attemptBlocking {
-        val selector = "button .StretchedBox"
-        page.locator(selector).nth(0).click()
+        val selector = s".Hidden :text(\"${picIndex + 1}/9\")"
+        if (page.isVisible(selector)) {
+          page.locator(selector).click()
+        }
       }
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
       _ <- ZIO.attemptBlocking {
-        //page.waitForFileChooser(new Page.WaitForFileChooserOptions().setPredicate())
-        val fileChooser = page.waitForFileChooser(new Runnable {
-          override def run(): Unit = page.locator("[role=button] :text(\"Gallery\")").click()
-        })
-        fileChooser.setFiles(Paths.get(file))
+        page.locator("div[role=dialog]").locator("button").locator(":text(\"Delete\")").click()
+        //page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
+      }
+      _ <- ZIO.attempt {
+        page.locator(":text(\"Save\")").nth(1).click()
+      }
+    } yield ()
+  }
 
-      }
-      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
+  def countPic() = PageLock.lock {
+    for {
+      _ <- navigate("https://tinder.com/app/profile/edit")
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(5))
+      page <- ZIO.service[Page]
       _ <- ZIO.attemptBlocking {
-        page.locator("button :text(\"Choose\")").click()
+        val x = page.locator(s".StretchedBox .Hidden :text(\"Remove Media\")").count()
+        println(s">>>> ${x}")
       }
-      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
     } yield ()
   }
 
@@ -129,23 +176,12 @@ object Commands {
       page <- ZIO.service[Page]
       _ <- navigate("https://tinder.com/app/profile/edit")
       _ <- ZIO.sleep(zio.Duration.fromSeconds(5))
-      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic1.jpg")
-      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic2.jpg")
-      //      _ <- ZIO.attemptBlocking {
-//        val selector = ".Hidden :text(\"5/9\")"
-//        if (page.isVisible(selector)) {
-//          page.locator(selector).click()
-//        }
-//      }
-//      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
-//      _ <- ZIO.attemptBlocking {
-//        page.locator("div[role=dialog]").locator("button").locator(":text(\"Delete\")").click()
-//        //page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
-//      }
-//      _ <- ZIO.attempt {
-//        page.locator(":text(\"Save\")").nth(1).click()
-//      }
-//      _ <- navigate("https://tinder.com/")
+      _ <- removePic(1)
+//      _ <- removePic(1)
+//      _ <- removePic(1)
+//      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic7.jpg", 1)
+//      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic5.jpg", 1)
+      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic3.jpg", 1)
     } yield ()
   }
 }
