@@ -113,7 +113,7 @@ object MyApp extends ZIOAppDefault {
     _ <- command match {
       case s"bio ${index}" => Commands.editProfile(bios(index.toInt))
       case "boost" => Commands.applyBoost
-      case "p1" => Commands.editPic()
+      case "p1" => Commands.editPic(List("pic3.jpg", "pic5.jpg", "pic7.jpg", "pic6.jpg"))
       case "count" => Commands.countPic()
       case "move" => Commands.movePic(6, 1)
       case "q" => ZIO.attempt { java.lang.System.exit(0) }

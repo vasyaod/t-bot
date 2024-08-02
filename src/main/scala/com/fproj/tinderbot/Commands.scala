@@ -82,7 +82,8 @@ object Commands {
       _ <- ZIO.attemptBlocking {
         page.mouse.move(bb0.x + bb0.width / 2, bb0.y + bb0.height / 2)
         page.mouse.down()
-        page.mouse.move(bb1.x + bb1.width / 2, bb1.y + bb1.height / 2, new Mouse.MoveOptions().setSteps(20))
+//        page.mouse.move(bb1.x + bb1.width / 2, bb1.y + bb1.height / 2, new Mouse.MoveOptions().setSteps(20))
+        page.mouse.move(bb1.x + bb1.width / 2, bb1.y + bb1.height / 2)
         page.mouse.up()
       }
     } yield ()
@@ -112,11 +113,15 @@ object Commands {
       _ <- ZIO.attemptBlocking {
         page.locator("button :text(\"Choose\")").click()
       }
-      _ <- ZIO.sleep(zio.Duration.fromSeconds(7))
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(10))
+      bb0 <- ZIO.attemptBlocking {
+        page.locator(s"span .StretchedBox .StretchedBox").last().boundingBox()
+      }
       bb1 <- ZIO.attemptBlocking {
         page.locator(s"span .StretchedBox .StretchedBox").nth(placeIndex).boundingBox()
       }
       _ <- drugAndDrop(bb0, bb1)
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
     } yield ()
   }
 
@@ -152,9 +157,7 @@ object Commands {
         page.locator("div[role=dialog]").locator("button").locator(":text(\"Delete\")").click()
         //page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2);
       }
-      _ <- ZIO.attempt {
-        page.locator(":text(\"Save\")").nth(1).click()
-      }
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
     } yield ()
   }
 
@@ -170,18 +173,28 @@ object Commands {
     } yield ()
   }
 
-  def editPic() = PageLock.lock {
+  def editPic(pics: Seq[String]) = PageLock.lock {
     for {
-//      _ <- ZIO.logInfo("Set New BIO: " + bio)
+      _ <- ZIO.logInfo("Upload a new pictures")
       page <- ZIO.service[Page]
       _ <- navigate("https://tinder.com/app/profile/edit")
       _ <- ZIO.sleep(zio.Duration.fromSeconds(5))
-      _ <- removePic(1)
-//      _ <- removePic(1)
-//      _ <- removePic(1)
-//      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic7.jpg", 1)
-//      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic5.jpg", 1)
-      _ <- uploadPic("/home/vasyaod/work/tinder-bot/pics/pic3.jpg", 1)
+      picCount <- ZIO.attemptBlocking {
+        page.locator(s".StretchedBox .Hidden :text(\"Remove Media\")").count()
+      }
+      _ <- ZIO.logInfo(s"Initial Number of pictures: $picCount")
+      // Remove old pics
+      _ <- removePic(1).repeatN(picCount - pics.size)
+      // Remove upload new ones
+      _ <- ZIO.collectAll {
+        pics.map(fileName => uploadPic(s"/home/vasyaod/work/tinder-bot/pics/$fileName", 1))
+      }
+      // Save data
+      _ <- ZIO.attempt {
+        page.locator(":text(\"Save\")").nth(1).click()
+      }
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(3))
+      _ <- navigate("https://tinder.com/")
     } yield ()
   }
 }
