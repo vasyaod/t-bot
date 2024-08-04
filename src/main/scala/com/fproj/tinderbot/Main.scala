@@ -105,13 +105,13 @@ object MyApp extends ZIOAppDefault {
   val randomBio =
     for {
       i <- Random.nextIntBetween(0, bios.size)
-      _ <- Commands.editProfile(bios(i))
+      _ <- Commands.editProfile(bios(i), "ML and Data Engineer")
     } yield ()
 
   val readCommand = for {
     command <- readLine
     _ <- command match {
-      case s"bio ${index}" => Commands.editProfile(bios(index.toInt))
+      case s"bio ${index}" => Commands.editProfile(bios(index.toInt), "ML and Data Engineer")
       case "boost" => Commands.applyBoost
       case "p1" => Commands.editPic(List("pic3.jpg", "pic5.jpg", "pic7.jpg", "pic6.jpg"))
       case "count" => Commands.countPic()

@@ -61,17 +61,20 @@ object Commands {
     } yield ()
   }
 
-  def editProfile(bio: String) = PageLock.lock {
+  def editProfile(bio: String, jobTitle: String) = PageLock.lock {
     for {
       _ <- ZIO.logInfo("Set New BIO: " + bio)
       page <- ZIO.service[Page]
       _ <- navigate("https://tinder.com/app/profile/edit")
       _ <- ZIO.attempt {
         page.locator("textarea").first().fill(bio)
+        page.locator("input#job_title").first().fill(jobTitle)
       }
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
       _ <- ZIO.attempt {
         page.locator(":text(\"Save\")").nth(1).click()
       }
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
       _ <- navigate("https://tinder.com/")
     } yield ()
   }
@@ -194,6 +197,7 @@ object Commands {
         page.locator(":text(\"Save\")").nth(1).click()
       }
       _ <- ZIO.sleep(zio.Duration.fromSeconds(3))
+      // Send page back to title page
       _ <- navigate("https://tinder.com/")
     } yield ()
   }
