@@ -1,14 +1,12 @@
 package com.fproj.tinderbot
 
-import com.microsoft.playwright.BrowserContext.StorageStateOptions
-import com.microsoft.playwright.{Browser, BrowserContext, BrowserType, Page, Playwright}
-import zio._
-import zio.Console._
-import cron4zio._
 import com.cronutils.model.Cron
+import com.microsoft.playwright.{Browser, BrowserContext, BrowserType, Playwright}
+import cron4zio._
+import zio.Console._
+import zio._
 
 import scala.jdk.CollectionConverters._
-import java.nio.file.{Path, Paths}
 
 object MyApp extends ZIOAppDefault {
 

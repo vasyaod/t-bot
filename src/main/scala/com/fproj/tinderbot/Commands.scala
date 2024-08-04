@@ -1,7 +1,6 @@
 package com.fproj.tinderbot
 
-import com.microsoft.playwright.{Mouse, Page}
-import com.microsoft.playwright.Page.WaitForDownloadOptions
+import com.microsoft.playwright.Page
 import com.microsoft.playwright.options.BoundingBox
 import zio._
 
@@ -58,6 +57,11 @@ object Commands {
       } else {
         ZIO.logInfo("Authorization is not necessary")
       }
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(60))
+      likeStatus <- ZIO.attempt {
+        page.locator("a#likes-you span span").textContent()
+      }
+      _ <- ZIO.logInfo("Like status: " + likeStatus)
     } yield ()
   }
 
