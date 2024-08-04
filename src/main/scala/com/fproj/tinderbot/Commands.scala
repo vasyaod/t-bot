@@ -61,7 +61,7 @@ object Commands {
     } yield ()
   }
 
-  def editProfile(bio: String, jobTitle: String) = PageLock.lock {
+  def editProfile(bio: String, jobTitle: String, company: String) = PageLock.lock {
     for {
       _ <- ZIO.logInfo("Set New BIO: " + bio)
       page <- ZIO.service[Page]
@@ -69,6 +69,7 @@ object Commands {
       _ <- ZIO.attempt {
         page.locator("textarea").first().fill(bio)
         page.locator("input#job_title").first().fill(jobTitle)
+        page.locator("input#company").first().fill(company)
       }
       _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
       _ <- ZIO.attempt {
@@ -187,7 +188,7 @@ object Commands {
       }
       _ <- ZIO.logInfo(s"Initial Number of pictures: $picCount")
       // Remove old pics
-      _ <- removePic(1).repeatN(picCount - pics.size)
+      _ <- removePic(1).repeatN(picCount - 4)
       // Remove upload new ones
       _ <- ZIO.collectAll {
         pics.map(fileName => uploadPic(s"/home/vasyaod/work/tinder-bot/pics/$fileName", 1))

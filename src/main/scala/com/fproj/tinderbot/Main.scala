@@ -12,21 +12,6 @@ import java.nio.file.{Path, Paths}
 
 object MyApp extends ZIOAppDefault {
 
-  val bios = List(
-    """Gym, CrossFit, Cycling are my spare time friends. A few times per an year i’m cycling in random places across the world with a tent for long distances, when a trip is more unpredictable, weird and “dangerous” then better.
-      |
-      |Sometimes I think that I can "speak" with machines much better than humans.
-      |
-      |Personal connection is preferable, let's say "no" to bots and scammers 😎...""".stripMargin,
-
-    """Have passion to my work, sometimes, maybe, too much.
-      |Can speak and whisper with machines and machines love me.
-      |Gym, CrossFit and Cycling are my spare time friends.""".stripMargin,
-
-    """Have passion to my work, sometimes, maybe, too much.
-      |The best place for time together is in a Gym and I'm seriously.""".stripMargin,
-  )
-
   val playwrightLayer = ZLayer.scoped {
     ZIO.acquireRelease {
       ZIO.attempt {
@@ -102,18 +87,28 @@ object MyApp extends ZIOAppDefault {
     .provide(playwrightLayer, makeBrowser, makeBrowserContext, makePage, PageLock.make)
 //    .onInterrupt(printLine("Stopped").orDie)
 
-  val randomBio =
+//  val randomBio =
+//    for {
+//      i <- Random.nextIntBetween(0, bios.size)
+//      _ <- Commands.editProfile(bios(i), "ML and Data Engineer")
+//    } yield ()
+
+  val randomProfile =
     for {
-      i <- Random.nextIntBetween(0, bios.size)
-      _ <- Commands.editProfile(bios(i), "ML and Data Engineer")
+      profiles <- Profiles.profiles
+      i <- Random.nextIntBetween(0, profiles.size)
+      profile = profiles(i)
+      _ <- Commands.editProfile(profile.bio, profile.jobTitle, profile.company)
+      _ <- Commands.editPic(profile.pics)
     } yield ()
 
   val readCommand = for {
     command <- readLine
     _ <- command match {
-      case s"bio ${index}" => Commands.editProfile(bios(index.toInt), "ML and Data Engineer")
-      case "boost" => Commands.applyBoost
-      case "p1" => Commands.editPic(List("pic3.jpg", "pic5.jpg", "pic7.jpg", "pic6.jpg"))
+//      case s"bio ${index}" => Commands.editProfile(bios(index.toInt), "ML and Data Engineer")
+//      case "boost" => Commands.applyBoost
+//      case "p1" => Commands.editPic(List("pic3.jpg", "pic5.jpg", "pic7.jpg", "pic6.jpg"))
+      case "random" => randomProfile
       case "count" => Commands.countPic()
       case "move" => Commands.movePic(6, 1)
       case "q" => ZIO.attempt { java.lang.System.exit(0) }
@@ -129,7 +124,7 @@ object MyApp extends ZIOAppDefault {
 //      page <- ZIO.service[Page]
       _ <- Commands.auth.forkDaemon
       _ <- Commands.auth.schedule(Schedule.spaced(1.hours)).forkDaemon
-      _ <- randomBio.schedule(Schedule.spaced(247.minutes)).forkDaemon
+      _ <- randomProfile.schedule(Schedule.spaced(6.hours)).forkDaemon
       _ <- repeatEffectForCron(Commands.applyBoost, timeForBoost).unit.forkDaemon
       _ <- printLine("Type command here:")
       _ <- readCommand.logError.ignore.forever
