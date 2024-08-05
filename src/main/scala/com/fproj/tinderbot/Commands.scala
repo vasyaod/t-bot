@@ -75,7 +75,7 @@ object Commands {
         page.locator("input#job_title").first().fill(jobTitle)
         page.locator("input#company").first().fill(company)
       }
-      _ <- ZIO.sleep(zio.Duration.fromSeconds(1))
+      _ <- ZIO.sleep(zio.Duration.fromSeconds(2))
       _ <- ZIO.attempt {
         page.locator(":text(\"Save\")").nth(1).click()
       }
